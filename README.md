@@ -13,19 +13,21 @@ An MCP server for **exploring Shopee** — product search and prices — from an
 
 ## Tools
 
-| Tool                 | What it returns                                                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `search_products`    | Keyword search with sorting & pagination — names, prices, sold counts, ratings, seller location, product IDs, URLs.                 |
-| `get_product_detail` | One product — price & discount, brand, condition, category, rating, **review count**, **sold count**, stock, location, description. |
+| Tool                 | What it returns                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_products`    | Keyword search with sorting & pagination — names, prices, sold counts, ratings, seller location, product IDs, URLs.                         |
+| `get_product_detail` | One product — price & discount, brand, condition, category, rating, **review count**, **sold count**, stock, location, description.         |
+| `check_login_status` | Whether the saved browser session is currently logged into Shopee — check this before the tools above instead of waiting on a slow failure. |
 
 ### Tool annotations
 
-Per the [MCP annotations spec](https://modelcontextprotocol.io/) — both tools are read-only, with no side effects.
+Per the [MCP annotations spec](https://modelcontextprotocol.io/) — all tools are read-only, with no side effects.
 
 | Tool                 | Read-only | Idempotent | Destructive |
 | -------------------- | :-------: | :--------: | :---------: |
 | `search_products`    |     ✓     |     ✓      |      –      |
 | `get_product_detail` |     ✓     |     ✓      |      –      |
+| `check_login_status` |     ✓     |     ✓      |      –      |
 
 ## Why a browser?
 
@@ -104,6 +106,7 @@ All optional — see `.env.example`. Copy to `.env` to override.
 npm run lint         # eslint
 npm run format       # prettier --write (format:check to verify)
 npm run typecheck
+npm run test:unit    # offline unit tests (no login/display needed)
 npm test             # live smoke test (needs a display; use xvfb-run on servers)
 npm run dev          # tsx watch
 ```

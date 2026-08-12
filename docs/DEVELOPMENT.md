@@ -12,6 +12,7 @@
 | `npm run lint`      | ESLint over the repo                                        |
 | `npm run format`    | Prettier write; `npm run format:check` to verify            |
 | `npm run typecheck` | `tsc --noEmit`, strict, with unused-symbol checks           |
+| `npm run test:unit` | Offline unit tests — no login, no display, safe in CI       |
 | `npm test`          | **Live smoke test** — needs a login and a display           |
 
 ## Project layout
@@ -28,11 +29,13 @@ src/
   tools/
     search.ts       # search_products
     product.ts      # get_product_detail
+    status.ts       # check_login_status
   utils/
     cache.ts        # in-memory TTL cache
     errors.ts       # error wrapper / friendly messages
 test/
-  smoke.ts          # the npm test health check
+  unit.ts           # offline unit tests (npm run test:unit)
+  smoke.ts          # the npm test health check (live)
 ```
 
 ## Why a browser is required

@@ -42,6 +42,11 @@ const CHECKS: Check[] = [
     args: { shopId: '78730497', itemId: '47060432055' },
     expect: ['Price:', 'Could not read product', 'Not signed in to Shopee'],
   },
+  {
+    tool: 'check_login_status',
+    args: {},
+    expect: ['Logged in to', 'Not logged in to'],
+  },
 ];
 
 async function main() {
