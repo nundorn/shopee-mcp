@@ -88,6 +88,11 @@ export function registerSearchTools(server: McpServer): void {
 
         const shown = items.slice(0, limit);
         const totalCount = data.total_count ?? 0;
+        // Estimate only: `items.length` is Shopee's per-request page size, but flattening
+        // an ads card into multiple real_items (see flattenSearchItems) can inflate it
+        // above that true size, undercounting totalPages. Shopee doesn't expose the real
+        // page size otherwise, so this stays an approximation — it doesn't affect
+        // pagination itself, only the displayed page count.
         const totalPages = totalCount > 0 ? Math.ceil(totalCount / items.length) : page;
 
         const lines: string[] = [

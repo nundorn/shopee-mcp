@@ -7,19 +7,27 @@
 import assert from 'node:assert/strict';
 import { flattenSearchItems, formatPrice } from '../src/tools/search.js';
 import { parseProductUrl } from '../src/tools/product.js';
+import { shopeeCapture, ShopeeAuthRequiredError } from '../src/api/client.js';
 import { cache } from '../src/utils/cache.js';
 import type { SearchItem, ItemBasic } from '../src/api/types.js';
 
 let failures = 0;
+const pending: Array<{ name: string; fn: () => void | Promise<void> }> = [];
 
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`✅ ${name}`);
-  } catch (err) {
-    failures++;
-    console.log(`❌ ${name}`);
-    console.log(`   ${err instanceof Error ? err.message : String(err)}`);
+function test(name: string, fn: () => void | Promise<void>): void {
+  pending.push({ name, fn });
+}
+
+async function runTests(): Promise<void> {
+  for (const { name, fn } of pending) {
+    try {
+      await fn();
+      console.log(`✅ ${name}`);
+    } catch (err) {
+      failures++;
+      console.log(`❌ ${name}`);
+      console.log(`   ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 }
 
@@ -153,6 +161,40 @@ test('cache: key() joins parts with ":"', () => {
   assert.equal(cache.key('search', 'shoes', 1, 20, 'relevance'), 'search:shoes:1:20:relevance');
 });
 
+// ─── shopeeCapture retry-on-timeout ─────────────────────────────────────────
+
+test('shopeeCapture: recovers from a single timeout via retry, no auth error', async () => {
+  let calls = 0;
+  const flakyCapture = async () => {
+    calls++;
+    if (calls === 1) throw new Error('Timeout 30000ms exceeded');
+    return { error: 0, items: [] };
+  };
+  const result = await shopeeCapture(
+    'https://x',
+    'search/search_items',
+    undefined,
+    false,
+    flakyCapture,
+  );
+  assert.equal(calls, 2);
+  assert.deepEqual(result, { error: 0, items: [] });
+});
+
+test('shopeeCapture: reports auth-required only after a second consecutive timeout', async () => {
+  let calls = 0;
+  const alwaysTimesOut = async () => {
+    calls++;
+    throw new Error('Timeout 30000ms exceeded');
+  };
+  await assert.rejects(
+    () => shopeeCapture('https://x', 'search/search_items', undefined, false, alwaysTimesOut),
+    ShopeeAuthRequiredError,
+  );
+  assert.equal(calls, 2);
+});
+
+await runTests();
 console.log(
   `\n${failures === 0 ? '✅ All unit tests passed' : `❌ ${failures} unit test(s) failed`}\n`,
 );

@@ -1,4 +1,7 @@
 import { captureJson, BASE_URL } from '../browser/session.js';
+import type { CaptureOptions } from '../browser/session.js';
+
+type CaptureFn = <T>(pageUrl: string, opts: CaptureOptions) => Promise<T>;
 
 /** Shopee's anti-bot/anti-fraud rejection — almost always means "not logged in / detected". */
 export const SHOPEE_ANTIBOT_ERROR = 90309999;
@@ -36,19 +39,25 @@ export class ShopeeAuthRequiredError extends ShopeeAPIError {
  *
  * @param pageUrl   the Shopee page to load (its app fires the API call)
  * @param apiMatch  substring identifying the target /api/v4 response
+ * @param capture   injectable for tests; defaults to the real browser capture
  */
 export async function shopeeCapture<T extends { error?: number; error_msg?: string }>(
   pageUrl: string,
   apiMatch: string,
   timeoutMs?: number,
+  isRetry = false,
+  capture: CaptureFn = captureJson,
 ): Promise<T> {
   let json: T;
   try {
-    json = await captureJson<T>(pageUrl, { apiMatch, timeoutMs });
+    json = await capture<T>(pageUrl, { apiMatch, timeoutMs });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (/timeout/i.test(msg)) {
-      // No matching response arrived — usually the gate silently dropped it.
+      // A timeout usually means the anti-bot gate silently dropped the request, but a
+      // slow page load or transient network blip looks identical. Retry once before
+      // reporting "not logged in" so we don't misdiagnose a one-off hiccup.
+      if (!isRetry) return shopeeCapture<T>(pageUrl, apiMatch, timeoutMs, true, capture);
       throw new ShopeeAuthRequiredError(apiMatch);
     }
     throw new ShopeeAPIError(`Browser error loading ${apiMatch}: ${msg}`, undefined, apiMatch);
