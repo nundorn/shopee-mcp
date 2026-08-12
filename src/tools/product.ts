@@ -21,7 +21,7 @@ function priceText(p: PdpPriceValue, currency: string): string {
 }
 
 /** Parse "shopId/itemId" out of a Shopee product URL, if present. */
-function parseProductUrl(url: string): { shopId: string; itemId: string } | null {
+export function parseProductUrl(url: string): { shopId: string; itemId: string } | null {
   // /product/<shopid>/<itemid>  OR  ...-i.<shopid>.<itemid>
   const m1 = url.match(/\/product\/(\d+)\/(\d+)/);
   if (m1) return { shopId: m1[1], itemId: m1[2] };

@@ -4,10 +4,24 @@ import { shopeeCapture, shopeeUrl } from '../api/client.js';
 import { BASE_URL } from '../browser/session.js';
 import { cache } from '../utils/cache.js';
 import { withErrorHandling } from '../utils/errors.js';
-import type { SearchItemsResponse, ItemBasic } from '../api/types.js';
+import type { SearchItemsResponse, SearchItem, ItemBasic } from '../api/types.js';
+
+/**
+ * Shopee search response mixes plain product cards (with `item_basic`) and
+ * recommendation/ads cards that nest real products under `real_items`.
+ * Flatten both shapes into a single list of `ItemBasic`, dropping any card
+ * (or nested real item) that has neither.
+ */
+export function flattenSearchItems(items: SearchItem[] | null | undefined): ItemBasic[] {
+  return (items ?? []).flatMap((it) => {
+    if (it.item_basic) return [it.item_basic];
+    if (it.real_items?.length) return it.real_items.map((ri) => ri.item_basic).filter(Boolean);
+    return [];
+  });
+}
 
 // Shopee stores prices as the real amount × 100000.
-function formatPrice(raw: number, currency = 'IDR'): string {
+export function formatPrice(raw: number, currency = 'IDR'): string {
   const amount = raw / 100000;
   if (currency === 'IDR') return `Rp${Math.round(amount).toLocaleString('id-ID')}`;
   return `${currency} ${amount.toLocaleString('id-ID')}`;
@@ -63,15 +77,7 @@ export function registerSearchTools(server: McpServer): void {
 
         const data = await shopeeCapture<SearchItemsResponse>(searchUrl, 'search/search_items');
 
-        // Shopee search response mixes plain product cards (with `item_basic`) and
-        // recommendation/ads cards that nest real products under `real_items`.
-        // Flatten both so every result row carries an `item_basic`.
-        const items = (data.items ?? []).flatMap((it) => {
-          if (it.item_basic) return [it];
-          if (it.real_items?.length)
-            return it.real_items.map((ri) => ({ item_basic: ri.item_basic }));
-          return [];
-        });
+        const items = flattenSearchItems(data.items);
         if (items.length === 0) {
           return {
             content: [
@@ -90,9 +96,7 @@ export function registerSearchTools(server: McpServer): void {
           ``,
         ];
 
-        shown.forEach((it, i) => {
-          const b = it.item_basic;
-          if (!b) return;
+        shown.forEach((b, i) => {
           const rank = (page - 1) * limit + i + 1;
           const rating = b.item_rating?.rating_star
             ? `⭐ ${b.item_rating.rating_star.toFixed(1)}`
