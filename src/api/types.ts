@@ -28,10 +28,42 @@ export interface ItemBasic {
   image: string;
 }
 
+/**
+ * Shopee is migrating search cards away from `item_basic`. On a migrated
+ * storefront (Thailand, as of 2026-09) every card returns `item_basic: null`
+ * and carries the same data in these fields instead.
+ */
+export interface ItemCardDisplayPrice {
+  price: number;
+  strikethrough_price?: number;
+  discount?: number;
+}
+
+export interface ItemCardSoldCount {
+  historical_sold_count?: number;
+  monthly_sold_count?: number;
+}
+
+export interface ItemCardDisplayedAsset {
+  name?: string;
+  shop_location?: string;
+}
+
+export interface ItemCardData {
+  itemid?: number;
+  shopid?: number;
+  item_card_display_price?: ItemCardDisplayPrice;
+  item_card_display_sold_count?: ItemCardSoldCount;
+}
+
 export interface SearchItem {
   itemid: number;
   shopid: number;
-  item_basic: ItemBasic;
+  /** Null on storefronts already migrated to the card shape. */
+  item_basic: ItemBasic | null;
+  item_card_displayed_asset?: ItemCardDisplayedAsset;
+  item_data?: ItemCardData;
+  item_rating?: ItemRating;
   /**
    * Shopee search response sometimes nests real product cards under `real_items`
    * (e.g. recommendation/ads cards that have no top-level `item_basic`).

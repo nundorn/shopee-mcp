@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { shopeeCapture, shopeeUrl } from '../api/client.js';
 import { BASE_URL } from '../browser/session.js';
 import { cache } from '../utils/cache.js';
-import { formatPrice, formatCount } from '../region.js';
+import { formatPrice, formatCount, getRegion } from '../region.js';
 import { withErrorHandling } from '../utils/errors.js';
 import type { SearchItemsResponse, SearchItem, ItemBasic } from '../api/types.js';
 
@@ -13,11 +13,44 @@ import type { SearchItemsResponse, SearchItem, ItemBasic } from '../api/types.js
  * Flatten both shapes into a single list of `ItemBasic`, dropping any card
  * (or nested real item) that has neither.
  */
+function fromCard(it: SearchItem): ItemBasic | null {
+  const name = it.item_card_displayed_asset?.name;
+  const itemid = it.itemid || it.item_data?.itemid;
+  const shopid = it.shopid || it.item_data?.shopid;
+  if (!name || !itemid || !shopid) return null;
+
+  const price = it.item_data?.item_card_display_price;
+  const sold = it.item_data?.item_card_display_sold_count;
+  const amount = price?.price ?? 0;
+  return {
+    itemid,
+    shopid,
+    name,
+    price: amount,
+    price_min: amount,
+    price_max: amount,
+    price_before_discount: price?.strikethrough_price ?? 0,
+    currency: getRegion().currency,
+    // The card carries no stock or like count; the detail tool has them.
+    stock: 0,
+    sold: sold?.monthly_sold_count ?? 0,
+    historical_sold: sold?.historical_sold_count ?? 0,
+    liked_count: 0,
+    discount: price?.discount ? `${price.discount}%` : undefined,
+    item_rating: it.item_rating ?? { rating_star: 0, rating_count: [] },
+    shop_location: it.item_card_displayed_asset?.shop_location ?? '',
+    is_official_shop: false,
+    shopee_verified: false,
+    image: '',
+  };
+}
+
 export function flattenSearchItems(items: SearchItem[] | null | undefined): ItemBasic[] {
   return (items ?? []).flatMap((it) => {
     if (it.item_basic) return [it.item_basic];
     if (it.real_items?.length) return it.real_items.map((ri) => ri.item_basic).filter(Boolean);
-    return [];
+    const card = fromCard(it);
+    return card ? [card] : [];
   });
 }
 
