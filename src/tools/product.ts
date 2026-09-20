@@ -5,19 +5,15 @@ import { BASE_URL } from '../browser/session.js';
 import { cache } from '../utils/cache.js';
 import { withErrorHandling, truncate } from '../utils/errors.js';
 import type { PdpResponse, PdpPriceValue } from '../api/types.js';
+import { formatPrice, formatCount } from '../region.js';
 
 // Shopee stores prices as the real amount × 100000.
-function fmt(raw: number, currency = 'IDR'): string {
-  const amount = raw / 100000;
-  if (currency === 'IDR') return `Rp${Math.round(amount).toLocaleString('id-ID')}`;
-  return `${currency} ${amount.toLocaleString('id-ID')}`;
-}
 
 function priceText(p: PdpPriceValue, currency: string): string {
   if (p.range_min >= 0 && p.range_max >= 0 && p.range_min !== p.range_max) {
-    return `${fmt(p.range_min, currency)} – ${fmt(p.range_max, currency)}`;
+    return `${formatPrice(p.range_min, currency)} – ${formatPrice(p.range_max, currency)}`;
   }
-  return fmt(p.single_value, currency);
+  return formatPrice(p.single_value, currency);
 }
 
 /** Parse "shopId/itemId" out of a Shopee product URL, if present. */
@@ -116,16 +112,14 @@ export function registerProductTools(server: McpServer): void {
           `💰 **Price:** ${price}${before ? ` ~~${priceText(before, currency)}~~ (-${discountPct}%)` : ''}`,
           '',
           `📊 **Stats:**`,
-          `  ⭐ Rating: ${rating ? rating.toFixed(2) : 'N/A'}${ratingCount ? ` (${ratingCount.toLocaleString('id-ID')} reviews)` : ''}`,
+          `  ⭐ Rating: ${rating ? rating.toFixed(2) : 'N/A'}${ratingCount ? ` (${formatCount(ratingCount)} reviews)` : ''}`,
           soldText ? `  ✅ Sold: ${soldText}` : '',
           '',
           `📋 **Details:**`,
           item.brand ? `  🏷 Brand: ${item.brand}` : '',
           `  🆕 Condition: ${conditionLabel}`,
           breadcrumb ? `  🗂 Category: ${breadcrumb}` : '',
-          stock !== undefined && stock !== null
-            ? `  📦 Stock: ${stock.toLocaleString('id-ID')}`
-            : '',
+          stock !== undefined && stock !== null ? `  📦 Stock: ${formatCount(stock)}` : '',
           item.is_free_shipping ? `  🚚 Free shipping` : '',
           `  📍 Location: ${item.shop_location || 'N/A'}`,
           `  🆔 Item ID: \`${item.item_id}\` | Shop ID: \`${item.shop_id}\``,

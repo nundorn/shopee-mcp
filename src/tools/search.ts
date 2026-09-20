@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { shopeeCapture, shopeeUrl } from '../api/client.js';
 import { BASE_URL } from '../browser/session.js';
 import { cache } from '../utils/cache.js';
+import { formatPrice, formatCount } from '../region.js';
 import { withErrorHandling } from '../utils/errors.js';
 import type { SearchItemsResponse, SearchItem, ItemBasic } from '../api/types.js';
 
@@ -20,12 +21,8 @@ export function flattenSearchItems(items: SearchItem[] | null | undefined): Item
   });
 }
 
-// Shopee stores prices as the real amount × 100000.
-export function formatPrice(raw: number, currency = 'IDR'): string {
-  const amount = raw / 100000;
-  if (currency === 'IDR') return `Rp${Math.round(amount).toLocaleString('id-ID')}`;
-  return `${currency} ${amount.toLocaleString('id-ID')}`;
-}
+// Price and count formatting follow the storefront's region (see src/region.ts).
+export { formatPrice };
 
 function priceText(b: ItemBasic): string {
   if (b.price_min && b.price_max && b.price_min !== b.price_max) {
@@ -97,7 +94,7 @@ export function registerSearchTools(server: McpServer): void {
 
         const lines: string[] = [
           `🛒 Search Results for "${query}"`,
-          `📊 ${totalCount.toLocaleString('id-ID')} total products | Page ${page}${totalPages > 1 ? `/${totalPages}` : ''}`,
+          `📊 ${formatCount(totalCount)} total products | Page ${page}${totalPages > 1 ? `/${totalPages}` : ''}`,
           ``,
         ];
 
@@ -107,7 +104,7 @@ export function registerSearchTools(server: McpServer): void {
             ? `⭐ ${b.item_rating.rating_star.toFixed(1)}`
             : '⭐ N/A';
           const sold = b.historical_sold || b.sold || 0;
-          const soldText = sold > 0 ? ` | 📦 ${sold.toLocaleString('id-ID')} sold` : '';
+          const soldText = sold > 0 ? ` | 📦 ${formatCount(sold)} sold` : '';
           const official = b.is_official_shop ? ' [Shopee Mall]' : '';
           const url = `${BASE_URL}/product/${b.shopid}/${b.itemid}`;
 

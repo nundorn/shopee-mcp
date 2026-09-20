@@ -146,3 +146,32 @@ This is an **unofficial** project. It is **not affiliated with, authorized, main
 It works by driving a real logged-in browser session against Shopee's web app, which can change without notice — a tool may break when Shopee updates its site or anti-bot behavior. It reads only publicly available product data and performs no account actions.
 
 You are responsible for using this software in compliance with [Shopee's Terms of Service](https://shopee.co.id/docs/terms) and applicable law. Use reasonable request volumes. All product names, logos, and brands are property of their respective owners.
+
+## Regional storefronts
+
+`SHOPEE_DOMAIN` selects the storefront **and** everything that has to agree with
+it — the browser locale and timezone reported to Shopee, and the currency used to
+format prices and counts. Pointing the domain at Thailand while the browser still
+claims `id-ID` / `Asia/Jakarta` is both wrong in the output and a signal to
+Shopee's anti-bot checks, so all of it is derived from one place (`src/region.ts`).
+
+| Domain                   | Locale | Timezone          | Currency |
+| ------------------------ | ------ | ----------------- | -------- |
+| `shopee.co.id` (default) | id-ID  | Asia/Jakarta      | Rp       |
+| `shopee.co.th`           | th-TH  | Asia/Bangkok      | ฿        |
+| `shopee.vn`              | vi-VN  | Asia/Ho_Chi_Minh  | ₫        |
+| `shopee.ph`              | en-PH  | Asia/Manila       | ₱        |
+| `shopee.com.my`          | ms-MY  | Asia/Kuala_Lumpur | RM       |
+| `shopee.sg`              | en-SG  | Asia/Singapore    | S$       |
+| `shopee.tw`              | zh-TW  | Asia/Taipei       | NT$      |
+| `shopee.com.br`          | pt-BR  | America/Sao_Paulo | R$       |
+
+An unlisted domain falls back to the Indonesian defaults; override any single
+value with `SHOPEE_LOCALE`, `SHOPEE_TIMEZONE` or `SHOPEE_CURRENCY`.
+
+**The login command reads the same variables**, so log in against the storefront
+you intend to query — cookies are per-domain:
+
+```bash
+SHOPEE_DOMAIN=shopee.co.th shopee-mcp-login
+```

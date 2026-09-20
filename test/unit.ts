@@ -6,6 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { flattenSearchItems, formatPrice } from '../src/tools/search.js';
+import { getRegion } from '../src/region.js';
 import { parseProductUrl } from '../src/tools/product.js';
 import { shopeeCapture, ShopeeAuthRequiredError } from '../src/api/client.js';
 import { cache } from '../src/utils/cache.js';
@@ -192,6 +193,37 @@ test('shopeeCapture: reports auth-required only after a second consecutive timeo
     ShopeeAuthRequiredError,
   );
   assert.equal(calls, 2);
+});
+
+// ─── region ─────────────────────────────────────────────────────────────────
+
+test('getRegion: maps the Thai storefront to th-TH / Bangkok / THB', () => {
+  const r = getRegion('shopee.co.th');
+  assert.equal(r.locale, 'th-TH');
+  assert.equal(r.timezone, 'Asia/Bangkok');
+  assert.equal(r.currency, 'THB');
+});
+
+test('getRegion: an unknown domain falls back to the Indonesian default', () => {
+  assert.equal(getRegion('shopee.example').currency, 'IDR');
+});
+
+test('getRegion: SHOPEE_TIMEZONE overrides the mapped zone', () => {
+  process.env.SHOPEE_TIMEZONE = 'Asia/Singapore';
+  try {
+    assert.equal(getRegion('shopee.co.th').timezone, 'Asia/Singapore');
+  } finally {
+    delete process.env.SHOPEE_TIMEZONE;
+  }
+});
+
+test('formatPrice: formats THB with a baht sign and two decimals', () => {
+  process.env.SHOPEE_DOMAIN = 'shopee.co.th';
+  try {
+    assert.equal(formatPrice(12462000, 'THB'), '\u0e3f124.62');
+  } finally {
+    delete process.env.SHOPEE_DOMAIN;
+  }
 });
 
 await runTests();

@@ -2,12 +2,17 @@ import 'dotenv/config';
 import os from 'node:os';
 import path from 'node:path';
 import { launchPersistentContext } from 'cloakbrowser';
+import { getRegion } from '../region.js';
 import type { BrowserContext, Page, Response } from 'playwright';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 export const DOMAIN = process.env.SHOPEE_DOMAIN || 'shopee.co.id';
 export const BASE_URL = `https://${DOMAIN}`;
+
+// Locale/timezone must match the storefront we point at, or Shopee sees a
+// browser that claims one country while browsing another.
+export const REGION = getRegion(DOMAIN);
 
 export const PROFILE_DIR =
   process.env.SHOPEE_PROFILE_DIR || path.join(os.homedir(), '.shopee-mcp', 'chrome-profile');
@@ -41,8 +46,8 @@ async function createContext(headless: boolean): Promise<BrowserContext> {
     userDataDir: PROFILE_DIR,
     headless,
     userAgent: USER_AGENT,
-    locale: 'id-ID',
-    timezone: 'Asia/Jakarta',
+    locale: REGION.locale,
+    timezone: REGION.timezone,
     viewport: { width: 1366, height: 768 },
     humanize: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
